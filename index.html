@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Генератор ценников</title>
+    <style>
+      * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+      }
+
+      body, html {
+          height: 100%;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background-color: #121212;
+          color: #fff;
+      }
+
+      .container {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          width: 100%;
+          max-width: 1200px;
+          padding: 20px;
+      }
+
+      h1 {
+          text-align: center;
+          margin-bottom: 40px;
+          font-size: 2.5rem;
+          color: #76ff03;
+      }
+
+      .input-group {
+          display: flex;
+          justify-content: space-between;
+          width: 100%;
+      }
+
+      .input-field {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 30%;
+      }
+
+      .input-field label {
+          margin-bottom: 10px;
+          font-size: 1.2rem;
+          color: #b0bec5;
+      }
+
+      .input-field textarea {
+          width: 100%;
+          height: 180px; /* Увеличиваем высоту поля */
+          padding: 15px;
+          border-radius: 8px;
+          border: 1px solid #424242;
+          background-color: #1f1f1f;
+          color: #fff;
+          font-size: 1rem;
+          resize: none;
+          transition: all 0.3s ease;
+      }
+
+      .input-field textarea:focus {
+          outline: none;
+          border-color: #76ff03;
+      }
+
+      .button {
+          margin-top: 40px;
+          padding: 15px 30px;
+          background-color: #76ff03;
+          color: #000;
+          border: none;
+          border-radius: 10px;
+          font-size: 1.5rem;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+      }
+
+      .button:disabled {
+          background-color: #424242;
+          cursor: not-allowed;
+      }
+
+      .button:hover:not(:disabled) {
+          background-color: #64dd17;
+      }
+
+      #openBtn {
+          display: none;
+          margin-top: 20px;
+          background-color: #ffeb3b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Генератор ценников</h1>
+      <div class="input-group">
+        <div class="input-field">
+          <label for="name">Наименование</label>
+          <textarea id="name" placeholder="Введите наименование"></textarea>
+        </div>
+        <div class="input-field">
+          <label for="barcode">Штрихкод</label>
+          <textarea id="barcode" placeholder="Введите штрихкод"></textarea>
+        </div>
+        <div class="input-field">
+          <label for="price">Цена</label>
+          <textarea id="price" placeholder="Введите цену"></textarea>
+        </div>
+      </div>
+      <button id="generateBtn" class="button" onclick="generateCSV()">
+        Генерация
+      </button>
+      <button id="openBtn" class="button" onclick="openHTML()">Открыть</button>
+    </div>
+
+    <script>
+      let csvData = '';
+
+      function generateCSV() {
+          const nameLines = document.getElementById('name').value.split("\n").filter(line => line.trim() !== "");
+          const barcodeLines = document.getElementById('barcode').value.split("\n").filter(line => line.trim() !== "");
+          const priceLines = document.getElementById('price').value.split("\n").filter(line => line.trim() !== "");
+
+          // Определяем максимальное количество строк, чтобы поддерживать одинаковое количество данных
+          const maxLength = Math.max(nameLines.length, barcodeLines.length, priceLines.length);
+
+          let csvArray = [];
+
+          // Проходим по каждой строке и формируем данные для CSV
+          for (let i = 0; i < maxLength; i++) {
+              let name = nameLines[i] || '';       // Если нет строки - вставляем пустую
+              let barcode = barcodeLines[i] || '';
+              let price = priceLines[i] || '';
+              if (name || barcode || price) {      // Пропускаем пустые строки
+                  csvArray.push(`${name};${barcode};${price}`);
+              }
+          }
+
+          // Объединяем массив строк в одну строку CSV
+          csvData = csvArray.join("\n");
+
+          // Выполняем POST запрос
+          fetch('https://faf192a5-6477-4506-8b86-77e404ff1a06.deepnoteproject.com', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: `data=${encodeURIComponent(csvData)}`
+          })
+          .then(response => response.text())
+          .then(data => {
+              // Проверяем положительный ответ
+              if (data) {
+                  document.getElementById('openBtn').style.display = 'block';
+                  sessionStorage.setItem('htmlResponse', data); // Сохраняем ответ для открытия в новой вкладке
+              }
+          })
+          .catch(error => console.error('Ошибка:', error));
+      }
+
+      function openHTML() {
+          const newWindow = window.open();
+          const htmlResponse = sessionStorage.getItem('htmlResponse');
+          newWindow.document.write(htmlResponse);
+      }
+    </script>
+  </body>
+</html>
